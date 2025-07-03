@@ -30,6 +30,7 @@ import net.minecraft.command.ICommandSender
 import net.minecraftforge.client.ClientCommandHandler
 import java.lang.RuntimeException
 import java.util.*
+import java.lang.ref.WeakReference
 
 @NEUAutoSubscribe
 object BrigadierRoot {
@@ -37,8 +38,8 @@ object BrigadierRoot {
     var dispatcher = CommandDispatcher<DefaultSource>()
         private set
     val parseText =
-        LRUCache.memoize<Pair<ICommandSender, String>, ParseResults<DefaultSource>>({ (sender, text) ->
-            dispatcher.parse(text, sender)
+        LRUCache.memoize<Pair<WeakReference<ICommandSender>, String>, ParseResults<DefaultSource>>({ (sender, text) ->
+            dispatcher.parse(text, sender.get())
         }, 1)
 
     fun getHelpForNode(node: CommandNode<DefaultSource>): String? {

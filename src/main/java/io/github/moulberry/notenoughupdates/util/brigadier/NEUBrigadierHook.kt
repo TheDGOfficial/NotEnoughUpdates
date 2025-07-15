@@ -30,7 +30,6 @@ import net.minecraft.util.ChatComponentText
 import net.minecraft.util.EnumChatFormatting.YELLOW
 import java.util.concurrent.CompletableFuture
 import java.util.function.Predicate
-import java.lang.ref.WeakReference
 
 /**
  * Hook for converting brigadier commands to normal legacy Minecraft commands (string array style).
@@ -66,7 +65,7 @@ class NEUBrigadierHook(
     private fun getText(args: Array<out String>) = "${commandNode.name} ${args.joinToString(" ")}"
 
     override fun processCommand(sender: ICommandSender, args: Array<out String>) {
-        val results = brigadierRoot.parseText.apply(WeakReference(sender) to getText(args).trim())
+        val results = brigadierRoot.parseText(sender to getText(args).trim())
         if (beforeCommand?.test(results) == false)
             return
         try {
@@ -93,7 +92,7 @@ class NEUBrigadierHook(
         }
         if (lc == null) {
             lastCompletion?.cancel(true)
-            val results = brigadierRoot.parseText.apply(WeakReference(sender) to originalText)
+            val results = brigadierRoot.parseText(sender to originalText)
             lc = brigadierRoot.dispatcher.getCompletionSuggestions(results)
         }
         lastCompletion = lc

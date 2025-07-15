@@ -25,22 +25,23 @@ import com.mojang.brigadier.tree.ArgumentCommandNode
 import com.mojang.brigadier.tree.CommandNode
 import io.github.moulberry.notenoughupdates.autosubscribe.NEUAutoSubscribe
 import io.github.moulberry.notenoughupdates.events.RegisterBrigadierCommandEvent
-import io.github.moulberry.notenoughupdates.util.LRUCache
 import net.minecraft.command.ICommandSender
 import net.minecraftforge.client.ClientCommandHandler
 import java.lang.RuntimeException
 import java.util.*
-import java.lang.ref.WeakReference
 
 @NEUAutoSubscribe
 object BrigadierRoot {
     private val help: MutableMap<CommandNode<DefaultSource>, String> = IdentityHashMap()
     var dispatcher = CommandDispatcher<DefaultSource>()
         private set
-    val parseText =
-        LRUCache.memoize<Pair<WeakReference<ICommandSender>, String>, ParseResults<DefaultSource>>({ (sender, text) ->
-            dispatcher.parse(text, sender.get())
-        }, 1)
+
+    private val parseCache =
+        Collections.synchronizedMap(WeakHashMap<Pair<ICommandSender, String>, ParseResults<DefaultSource>>())
+
+    val parseText: (Pair<ICommandSender, String>) -> ParseResults<DefaultSource> = { (sender, text) ->
+        parseCache.computeIfAbsent(sender to text) { dispatcher.parse(text, sender) }
+    }
 
     fun getHelpForNode(node: CommandNode<DefaultSource>): String? {
         return help[node]
@@ -53,7 +54,6 @@ object BrigadierRoot {
         help[node] = helpText
     }
 
-
     fun getAllUsages(
         path: String,
         node: CommandNode<ICommandSender>,
@@ -63,7 +63,7 @@ object BrigadierRoot {
         visited.add(node)
         val redirect = node.redirect
         if (redirect != null) {
-            yieldAll(getAllUsages(path, node.redirect, visited))
+            yieldAll(getAllUsages(path, redirect, visited))
             visited.remove(node)
             return@sequence
         }
@@ -79,7 +79,6 @@ object BrigadierRoot {
         visited.remove(node)
     }
 
-
     fun updateHooks() = registerHooks(ClientCommandHandler.instance)
 
     fun registerHooks(handler: ClientCommandHandler) {
@@ -90,7 +89,7 @@ object BrigadierRoot {
         }
         dispatcher = CommandDispatcher()
         help.clear()
-        parseText.clearCache()
+        parseCache.clear()
         val event = RegisterBrigadierCommandEvent(this)
         event.post()
         event.hooks.forEach {
@@ -102,3 +101,4 @@ object BrigadierRoot {
         }
     }
 }
+

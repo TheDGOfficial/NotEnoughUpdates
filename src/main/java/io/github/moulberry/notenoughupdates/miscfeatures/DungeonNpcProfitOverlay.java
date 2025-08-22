@@ -187,7 +187,7 @@ public class DungeonNpcProfitOverlay {
 
 			if ("§7Contents".equals(s) || "".equals(s) || "§cCan't open another chest!".equals(s) ||
 				"§aAlready opened!".equals(s) ||
-				"§eClick to open!".equals(s)) continue;
+				"§eClick to open!".equals(s) || "§dRolled RNG Meter rewards!".equals(s)) continue;
 			if ("§7Cost".equals(s)) {
 				isInCost = true;
 				continue;
@@ -348,6 +348,32 @@ public class DungeonNpcProfitOverlay {
 			this.amount = amount;
 		}
 
+    private static final SkyblockItem getShardFromLine(final String line) {
+    		switch (line) {
+    		    case "§9Wither":
+    		    	    return new SkyblockItem("SHARD_WITHER", 1);
+    		    case "§6Apex Dragon":
+    		    		  return new SkyblockItem("SHARD_APEX_DRAGON", 1);
+    		    case "§6Power Dragon":
+    		    		  return new SkyblockItem("SHARD_POWER_DRAGON", 1);
+    		    default:
+    		    		  return null;
+    		}
+    }
+
+    private static final String getDisplayNameOfShard(final String internalName) {
+    		switch (internalName) {
+    		    case "SHARD_WITHER":
+    		    	    return "§9Wither Shard";
+    		    case "SHARD_APEX_DRAGON":
+    		    		  return "§6Apex Dragon Shard";
+    		    case "SHARD_POWER_DRAGON":
+    		    		  return "§6Power Dragon Shard";
+    		    default:
+    		    		  return null;
+    		}
+    }
+
 		/**
 		 * Try to create a SkyblockItem from the given lore line.
 		 * <p>
@@ -364,6 +390,7 @@ public class DungeonNpcProfitOverlay {
 		public static @Nullable SkyblockItem createFromLoreEntry(String line) {
 			Matcher essenceMatcher = essencePattern.matcher(line);
 			Matcher enchantedBookMatcher = enchantedBookPattern.matcher(line);
+			SkyblockItem shard = null;
 
 			if (enchantedBookMatcher.matches()) {
 				String enchantName = ItemResolutionQuery.resolveEnchantmentByName(enchantedBookMatcher.group("enchantName"));
@@ -384,6 +411,8 @@ public class DungeonNpcProfitOverlay {
 				//this can only be an integer if the regex matches
 				int amount = Integer.parseInt(essenceAmount);
 				return new SkyblockItem(internalName, amount);
+			} else if (null != (shard = SkyblockItem.getShardFromLine(line))) {
+				return shard;
 			} else {
 				// Remove Book (from hot potato book), as a perf optimization since "book" is a very common phrase
 				String trimmedLine = line.trim();
@@ -421,7 +450,12 @@ public class DungeonNpcProfitOverlay {
 					return entry.get("displayname").getAsString();
 				}
 			}
-			return "ERROR";
+			String shardName = SkyblockItem.getDisplayNameOfShard(internalName);
+			if (null != shardName) {
+				return shardName;
+			} else {
+				return "ERROR";
+			}
 		}
 	}
 }

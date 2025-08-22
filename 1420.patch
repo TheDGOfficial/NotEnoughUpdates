@@ -1,0 +1,175 @@
+From 9be43d45fbb95746d0024f56057084f42ad2eb62 Mon Sep 17 00:00:00 2001
+From: nopo <nopotheemail@gmail.com>
+Date: Sat, 28 Dec 2024 11:05:29 +1100
+Subject: [PATCH 1/2] this is scuffed but it seems to work fine
+
+---
+ .../overlays/EquipmentOverlay.java            | 45 ++++++++++++++-----
+ 1 file changed, 34 insertions(+), 11 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java b/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java
+index 646d1b3cc..2ce53b9c8 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java
+@@ -211,6 +211,10 @@ public void renderGuis(GuiInventory inventory) {
+ 		int mouseX = Mouse.getX() * width / Minecraft.getMinecraft().displayWidth;
+ 		int mouseY = height - Mouse.getY() * height / Minecraft.getMinecraft().displayHeight - 1;
+ 
++		if ("rift".equals(SBInfo.getInstance().getLocation())) {
++			shouldRenderPets = false;
++		}
++
+ 		// Draw Backgrounds before anything, so hover overlay isn't occluded by the background
+ 		renderHudBackground(inventory);
+ 
+@@ -423,6 +427,11 @@ public void onClickItem(PlayerInteractEvent event) {
+ 				return;
+ 		}
+ 
++		//this is scuffed but works
++		if ("rift".equals(SBInfo.getInstance().getLocation())) {
++			slot += 100;
++		}
++
+ 		JsonObject currentEquipment = profileSpecific.savedEquipment.get(slot);
+ 		if (currentEquipment == null) return;
+ 
+@@ -441,7 +450,7 @@ public void onReceiveChatMessage(ClientChatReceivedEvent event) {
+ 				if (profileSpecific == null) return;
+ 
+ 				profileSpecific.savedEquipment.put(itemsToAdd.get(item), enrichItemStack(item));
+-				profileCache.get(SBInfo.getInstance().currentProfile).put(itemsToAdd.get(item), item);
++				profileCache.get(getProfile()).put(itemsToAdd.get(item), item);
+ 				itemsToAdd.remove(item);
+ 				return;
+ 			}
+@@ -453,36 +462,40 @@ private ItemStack getWardrobeSlot(int armourSlot) {
+ 			return null;
+ 		}
+ 
+-		if (!Objects.equals(SBInfo.getInstance().currentProfile, lastProfile)) {
+-			lastProfile = SBInfo.getInstance().currentProfile;
++		if (!Objects.equals(getProfile(), lastProfile)) {
++			lastProfile = getProfile();
+ 			slot1 = null;
+ 			slot2 = null;
+ 			slot3 = null;
+ 			slot4 = null;
+ 		}
++		int newArmourSlot = armourSlot;
++		if ("rift".equals(SBInfo.getInstance().getLocation())) {
++			newArmourSlot += 100;
++		}
+ 
+ 		NEUConfig.HiddenProfileSpecific profileSpecific = NotEnoughUpdates.INSTANCE.config.getProfileSpecific();
+ 		if (profileSpecific == null) return null;
+ 
+-		profileCache.putIfAbsent(lastProfile, new HashMap<>());
+-		Map<Integer, ItemStack> cache = profileCache.get(lastProfile);
++		profileCache.putIfAbsent(getProfile(), new HashMap<>());
++		Map<Integer, ItemStack> cache = profileCache.get(getProfile());
+ 		if (isInNamedGui("Your Equipment")) {
+ 			ItemStack itemStack = getChestSlotsAsItemStack(armourSlot);
+ 			if (itemStack != null) {
+-				profileSpecific.savedEquipment.put(armourSlot, enrichItemStack(itemStack));
++				profileSpecific.savedEquipment.put(newArmourSlot, enrichItemStack(itemStack));
+ 				cache.put(armourSlot, itemStack);
+ 				return itemStack;
+ 			}
+ 		} else {
+-			if (profileSpecific.savedEquipment.containsKey(armourSlot)) {
+-				if (cache.containsKey(armourSlot)) {
+-					return cache.get(armourSlot);
++			if (profileSpecific.savedEquipment.containsKey(newArmourSlot)) {
++				if (cache.containsKey(newArmourSlot)) {
++					return cache.get(newArmourSlot);
+ 				}
+ 				//don't use cache since the internalName is identical in most cases
+-				JsonObject jsonObject = profileSpecific.savedEquipment.get(armourSlot);
++				JsonObject jsonObject = profileSpecific.savedEquipment.get(newArmourSlot);
+ 				if (jsonObject != null) {
+ 					ItemStack result = NotEnoughUpdates.INSTANCE.manager.jsonToStack(jsonObject.getAsJsonObject(), false);
+-					cache.put(armourSlot, result);
++					cache.put(newArmourSlot, result);
+ 					return result;
+ 				}
+ 			}
+@@ -584,6 +597,16 @@ public void renderPreviewPetInvHud() {
+ 		Utils.drawTexturedRect(overlayLeft, overlayTop, PET_OVERLAY_WIDTH, PET_OVERLAY_HEIGHT, GL11.GL_NEAREST);
+ 	}
+ 
++	private String getProfile() {
++		String currentProfile = SBInfo.getInstance().currentProfile;
++		if (currentProfile == null) return "null";
++		if ("rift".equals(SBInfo.getInstance().getLocation())) {
++			currentProfile += "_rift";
++		}
++		return currentProfile;
++	}
++
++
+ 	public ItemStack slot1 = null;
+ 	public ItemStack slot2 = null;
+ 	public ItemStack slot3 = null;
+
+From 26d92d04eb27555cdc0723e8978d9c053893f636 Mon Sep 17 00:00:00 2001
+From: nopo <nopotheemail@gmail.com>
+Date: Wed, 1 Jan 2025 23:27:23 +1100
+Subject: [PATCH 2/2] dont need to do that
+
+---
+ .../overlays/EquipmentOverlay.java            | 20 +++++--------------
+ 1 file changed, 5 insertions(+), 15 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java b/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java
+index 2ce53b9c8..a78e2bee3 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/overlays/EquipmentOverlay.java
+@@ -450,7 +450,7 @@ public void onReceiveChatMessage(ClientChatReceivedEvent event) {
+ 				if (profileSpecific == null) return;
+ 
+ 				profileSpecific.savedEquipment.put(itemsToAdd.get(item), enrichItemStack(item));
+-				profileCache.get(getProfile()).put(itemsToAdd.get(item), item);
++				profileCache.get(SBInfo.getInstance().currentProfile).put(itemsToAdd.get(item), item);
+ 				itemsToAdd.remove(item);
+ 				return;
+ 			}
+@@ -462,8 +462,8 @@ private ItemStack getWardrobeSlot(int armourSlot) {
+ 			return null;
+ 		}
+ 
+-		if (!Objects.equals(getProfile(), lastProfile)) {
+-			lastProfile = getProfile();
++		if (!Objects.equals(SBInfo.getInstance().currentProfile, lastProfile)) {
++			lastProfile = SBInfo.getInstance().currentProfile;
+ 			slot1 = null;
+ 			slot2 = null;
+ 			slot3 = null;
+@@ -477,8 +477,8 @@ private ItemStack getWardrobeSlot(int armourSlot) {
+ 		NEUConfig.HiddenProfileSpecific profileSpecific = NotEnoughUpdates.INSTANCE.config.getProfileSpecific();
+ 		if (profileSpecific == null) return null;
+ 
+-		profileCache.putIfAbsent(getProfile(), new HashMap<>());
+-		Map<Integer, ItemStack> cache = profileCache.get(getProfile());
++		profileCache.putIfAbsent(lastProfile, new HashMap<>());
++		Map<Integer, ItemStack> cache = profileCache.get(lastProfile);
+ 		if (isInNamedGui("Your Equipment")) {
+ 			ItemStack itemStack = getChestSlotsAsItemStack(armourSlot);
+ 			if (itemStack != null) {
+@@ -597,16 +597,6 @@ public void renderPreviewPetInvHud() {
+ 		Utils.drawTexturedRect(overlayLeft, overlayTop, PET_OVERLAY_WIDTH, PET_OVERLAY_HEIGHT, GL11.GL_NEAREST);
+ 	}
+ 
+-	private String getProfile() {
+-		String currentProfile = SBInfo.getInstance().currentProfile;
+-		if (currentProfile == null) return "null";
+-		if ("rift".equals(SBInfo.getInstance().getLocation())) {
+-			currentProfile += "_rift";
+-		}
+-		return currentProfile;
+-	}
+-
+-
+ 	public ItemStack slot1 = null;
+ 	public ItemStack slot2 = null;
+ 	public ItemStack slot3 = null;

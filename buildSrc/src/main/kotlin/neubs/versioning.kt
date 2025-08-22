@@ -44,7 +44,7 @@ fun Project.setVersionFromEnvironment(): String {
         isIgnoreExitValue = true
     }
     if (execResult.exitValue == 0) {
-        buildExtra.add(String(stdout.toByteArray()).trim())
+        //buildExtra.add(String(stdout.toByteArray()).trim())
     }
 
     val gitDiffStdout = ByteArrayOutputStream()
@@ -54,7 +54,7 @@ fun Project.setVersionFromEnvironment(): String {
         isIgnoreExitValue = true
     }
     if (gitDiffResult.exitValue == 0 && gitDiffStdout.toByteArray().isNotEmpty()) {
-        buildExtra.add("dirty")
+        //buildExtra.add("dirty")
     }
 
     version = baseVersion + (if (buildExtra.isEmpty()) "" else buildExtra.joinToString(prefix = "+", separator = "."))

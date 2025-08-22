@@ -1,0 +1,308 @@
+From 88e2281eeba9d585ad75c28fc5c09abeb26e920b Mon Sep 17 00:00:00 2001
+From: Luna <lunaynx@gmail.com>
+Date: Tue, 11 Feb 2025 17:44:12 +0100
+Subject: [PATCH 1/4] Remove invisible titanium alert option
+
+---
+ .../notenoughupdates/miscfeatures/MiningStuff.java        | 3 +--
+ .../notenoughupdates/options/separatesections/Mining.java | 8 --------
+ 2 files changed, 1 insertion(+), 10 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
+index 9217dcae6..90f21ba1f 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
+@@ -78,8 +78,7 @@ public static void processBlockChangePacket(S23PacketBlockChange packetIn) {
+ 					if (existingBlock.getBlock() == Blocks.stone &&
+ 						existingBlock.getValue(BlockStone.VARIANT) == BlockStone.EnumType.DIORITE_SMOOTH)
+ 						return;
+-					if (!checkIfAnyIsAir(getAttachedBlocks(pos)) &&
+-						NotEnoughUpdates.INSTANCE.config.mining.titaniumAlertMustBeVisible)
++					if (!checkIfAnyIsAir(getAttachedBlocks(pos)))
+ 						return;
+ 					BlockPos player = Minecraft.getMinecraft().thePlayer.getPosition();
+ 
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/options/separatesections/Mining.java b/src/main/java/io/github/moulberry/notenoughupdates/options/separatesections/Mining.java
+index 85fb287ff..ad6f2a2f9 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/options/separatesections/Mining.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/options/separatesections/Mining.java
+@@ -959,14 +959,6 @@ public String toString() {
+ 	@ConfigEditorBoolean
+ 	public boolean titaniumAlert = true;
+ 
+-	@Expose
+-	@ConfigOption(
+-		name = "Titanium must touch air",
+-		desc = "Only show an alert if the Titanium touches air. (kinda sus)"
+-	)
+-	@ConfigEditorBoolean
+-	public boolean titaniumAlertMustBeVisible = false;
+-
+ 	@ConfigOption(
+ 		name = "Custom Textures",
+ 		desc = ""
+
+From 2b8e5a9a2a5057bf2e7b792d4772022346bfcd69 Mon Sep 17 00:00:00 2001
+From: Luna <lunaynx@gmail.com>
+Date: Tue, 11 Feb 2025 17:45:45 +0100
+Subject: [PATCH 2/4] Remove unused method
+
+---
+ .../miscfeatures/world/GenericBlockHighlighter.java       | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
+index 85230d7b6..84c746921 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
+@@ -60,14 +60,6 @@ public void onTick(TickEvent.ClientTickEvent ev) {
+ 			!canPlayerSeeNearBlocks(it.getX(), it.getY(), it.getZ()));
+ 	}
+ 
+-	protected boolean canPlayerSeeBlock(double xCoord, double yCoord, double zCoord) {
+-		EntityPlayerSP p = Minecraft.getMinecraft().thePlayer;
+-		if (p == null) return false;
+-		Vec3 playerPosition = new Vec3(p.posX, p.posY + p.eyeHeight, p.posZ);
+-		MovingObjectPosition hitResult = rayTraceBlocks(p.worldObj, playerPosition, xCoord + 0.5, yCoord + 0.5, zCoord + 0.5);
+-		return canSee(hitResult, new BlockPos(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5));
+-	}
+-
+ 	protected boolean canPlayerSeeNearBlocks(double x, double y, double z) {
+ 		EntityPlayerSP p = Minecraft.getMinecraft().thePlayer;
+ 		if (p == null) return false;
+
+From cfd9c463b5d062b58695fb387514bf96894d0dba Mon Sep 17 00:00:00 2001
+From: Luna <lunaynx@gmail.com>
+Date: Tue, 11 Feb 2025 17:47:20 +0100
+Subject: [PATCH 3/4] Better visibility check
+
+---
+ .../miscfeatures/MiningStuff.java             | 23 ++-----------------
+ .../world/GenericBlockHighlighter.java        |  2 +-
+ 2 files changed, 3 insertions(+), 22 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
+index 90f21ba1f..9ffd1a4b7 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
+@@ -22,6 +22,7 @@
+ import io.github.moulberry.notenoughupdates.NotEnoughUpdates;
+ import io.github.moulberry.notenoughupdates.autosubscribe.NEUAutoSubscribe;
+ import io.github.moulberry.notenoughupdates.core.util.render.TextRenderUtils;
++import io.github.moulberry.notenoughupdates.miscfeatures.world.GenericBlockHighlighter;
+ import io.github.moulberry.notenoughupdates.overlays.MiningOverlay;
+ import io.github.moulberry.notenoughupdates.util.SBInfo;
+ import io.github.moulberry.notenoughupdates.util.SpecialColour;
+@@ -78,7 +79,7 @@ public static void processBlockChangePacket(S23PacketBlockChange packetIn) {
+ 					if (existingBlock.getBlock() == Blocks.stone &&
+ 						existingBlock.getValue(BlockStone.VARIANT) == BlockStone.EnumType.DIORITE_SMOOTH)
+ 						return;
+-					if (!checkIfAnyIsAir(getAttachedBlocks(pos)))
++					if (!canPlayerSeeNearBlocks(pos.getX(), pos.getY(), pos.getZ()))
+ 						return;
+ 					BlockPos player = Minecraft.getMinecraft().thePlayer.getPosition();
+ 
+@@ -93,26 +94,6 @@ public static void processBlockChangePacket(S23PacketBlockChange packetIn) {
+ 		}
+ 	}
+ 
+-	private static BlockPos[] getAttachedBlocks(BlockPos block) {
+-		BlockPos[] blocks = new BlockPos[6];
+-		blocks[0] = new BlockPos(block.getX() - 1, block.getY(), block.getZ());
+-		blocks[1] = new BlockPos(block.getX() + 1, block.getY(), block.getZ());
+-		blocks[2] = new BlockPos(block.getX(), block.getY() - 1, block.getZ());
+-		blocks[3] = new BlockPos(block.getX(), block.getY() + 1, block.getZ());
+-		blocks[4] = new BlockPos(block.getX(), block.getY(), block.getZ() - 1);
+-		blocks[5] = new BlockPos(block.getX(), block.getY(), block.getZ() + 1);
+-		return blocks;
+-	}
+-
+-	private static boolean checkIfAnyIsAir(BlockPos[] blocks) {
+-		for (BlockPos block : blocks) {
+-			if (mc.theWorld.getBlockState(block).getBlock() instanceof BlockAir) {
+-				return true;
+-			}
+-		}
+-		return false;
+-	}
+-
+ 	@SubscribeEvent
+ 	public void onRenderOverlay(RenderGameOverlayEvent.Post event) {
+ 		if (!NotEnoughUpdates.INSTANCE.config.mining.titaniumAlert) {
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
+index 84c746921..ad3bf6706 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
+@@ -60,7 +60,7 @@ public void onTick(TickEvent.ClientTickEvent ev) {
+ 			!canPlayerSeeNearBlocks(it.getX(), it.getY(), it.getZ()));
+ 	}
+ 
+-	protected boolean canPlayerSeeNearBlocks(double x, double y, double z) {
++	public boolean canPlayerSeeNearBlocks(double x, double y, double z) {
+ 		EntityPlayerSP p = Minecraft.getMinecraft().thePlayer;
+ 		if (p == null) return false;
+ 		World world = p.worldObj;
+
+From 8012efc7cb404e582dd1ce3c08e7b3cf4c622972 Mon Sep 17 00:00:00 2001
+From: Luna <lunaynx@gmail.com>
+Date: Tue, 11 Feb 2025 18:04:46 +0100
+Subject: [PATCH 4/4] Move to utils
+
+---
+ .../miscfeatures/MiningStuff.java             |  3 +-
+ .../world/GenericBlockHighlighter.java        | 42 ++-----------------
+ .../notenoughupdates/util/Utils.java          | 41 ++++++++++++++++++
+ 3 files changed, 45 insertions(+), 41 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
+index 9ffd1a4b7..41bb573ba 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/MiningStuff.java
+@@ -22,7 +22,6 @@
+ import io.github.moulberry.notenoughupdates.NotEnoughUpdates;
+ import io.github.moulberry.notenoughupdates.autosubscribe.NEUAutoSubscribe;
+ import io.github.moulberry.notenoughupdates.core.util.render.TextRenderUtils;
+-import io.github.moulberry.notenoughupdates.miscfeatures.world.GenericBlockHighlighter;
+ import io.github.moulberry.notenoughupdates.overlays.MiningOverlay;
+ import io.github.moulberry.notenoughupdates.util.SBInfo;
+ import io.github.moulberry.notenoughupdates.util.SpecialColour;
+@@ -79,7 +78,7 @@ public static void processBlockChangePacket(S23PacketBlockChange packetIn) {
+ 					if (existingBlock.getBlock() == Blocks.stone &&
+ 						existingBlock.getValue(BlockStone.VARIANT) == BlockStone.EnumType.DIORITE_SMOOTH)
+ 						return;
+-					if (!canPlayerSeeNearBlocks(pos.getX(), pos.getY(), pos.getZ()))
++					if (!Utils.canPlayerSeeNearBlocks(pos.getX(), pos.getY(), pos.getZ()))
+ 						return;
+ 					BlockPos player = Minecraft.getMinecraft().thePlayer.getPosition();
+ 
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
+index ad3bf6706..37dd6a7d4 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/world/GenericBlockHighlighter.java
+@@ -20,6 +20,7 @@
+ package io.github.moulberry.notenoughupdates.miscfeatures.world;
+ 
+ import io.github.moulberry.notenoughupdates.core.util.render.RenderUtils;
++import io.github.moulberry.notenoughupdates.util.Utils;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.entity.EntityPlayerSP;
+ import net.minecraft.util.BlockPos;
+@@ -57,44 +58,7 @@ public void onWorldRenderLast(RenderWorldLastEvent event) {
+ 	public void onTick(TickEvent.ClientTickEvent ev) {
+ 		if (ev.phase != TickEvent.Phase.END) return;
+ 		highlightedBlocks.removeIf(it -> !isValidHighlightSpot(it) ||
+-			!canPlayerSeeNearBlocks(it.getX(), it.getY(), it.getZ()));
+-	}
+-
+-	public boolean canPlayerSeeNearBlocks(double x, double y, double z) {
+-		EntityPlayerSP p = Minecraft.getMinecraft().thePlayer;
+-		if (p == null) return false;
+-		World world = p.worldObj;
+-		Vec3 playerPosition = new Vec3(p.posX, p.posY + p.eyeHeight, p.posZ);
+-		BlockPos blockPos = new BlockPos(x, y, z);
+-		MovingObjectPosition hitResult1 = rayTraceBlocks(world, playerPosition, x, y, z);
+-		if (canSee(hitResult1, blockPos)) return true;
+-		MovingObjectPosition hitResult2 = rayTraceBlocks(world, playerPosition, x + 1, y, z);
+-		if (canSee(hitResult2, blockPos.add(1, 0, 1))) return true;
+-		MovingObjectPosition hitResult3 = rayTraceBlocks(world, playerPosition, x + 1, y + 1, z);
+-		if (canSee(hitResult3, blockPos.add(1, 1, 0))) return true;
+-		MovingObjectPosition hitResult4 = rayTraceBlocks(world, playerPosition, x + 1, y + 1, z + 1);
+-		if (canSee(hitResult4, blockPos.add(1, 1, 1))) return true;
+-
+-		MovingObjectPosition hitResult5 = rayTraceBlocks(world, playerPosition, x, y + 1, z + 1);
+-		if (canSee(hitResult5, blockPos.add(0, 1, 1))) return true;
+-		MovingObjectPosition hitResult6 = rayTraceBlocks(world, playerPosition, x, y + 1, z);
+-		if (canSee(hitResult6, blockPos.add(0, 1, 0))) return true;
+-		MovingObjectPosition hitResult7 = rayTraceBlocks(world, playerPosition, x + 1, y, z + 1);
+-		if (canSee(hitResult7, blockPos.add(1, 0, 1))) return true;
+-		MovingObjectPosition hitResult8 = rayTraceBlocks(world, playerPosition, x, y + 1, z);
+-		if (canSee(hitResult8, blockPos.add(0, 1, 0))) return true;
+-
+-		return false;
+-	}
+-
+-	private static boolean canSee(MovingObjectPosition hitResult, BlockPos bp) {
+-		return hitResult == null
+-			|| hitResult.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK
+-			|| bp.equals(hitResult.getBlockPos());
+-	}
+-
+-	private static MovingObjectPosition rayTraceBlocks(World world, Vec3 playerPosition, double x, double y, double z) {
+-		return world.rayTraceBlocks(playerPosition, new Vec3(x, y, z), false, true, true);
++			!Utils.canPlayerSeeNearBlocks(it.getX(), it.getY(), it.getZ()));
+ 	}
+ 
+ 	@SubscribeEvent
+@@ -110,7 +74,7 @@ public boolean tryRegisterInterest(double x, double y, double z) {
+ 		BlockPos blockPos = new BlockPos(x, y, z);
+ 		boolean contains = highlightedBlocks.contains(blockPos);
+ 		if (!contains) {
+-			boolean canSee = canPlayerSeeNearBlocks(blockPos.getX(), blockPos.getY(), blockPos.getZ());
++			boolean canSee = Utils.canPlayerSeeNearBlocks(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+ 			if (isValidHighlightSpot(blockPos) && canSee) {
+ 				highlightedBlocks.add(blockPos);
+ 			}
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/util/Utils.java b/src/main/java/io/github/moulberry/notenoughupdates/util/Utils.java
+index eb0c8a9e0..d406d5043 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/util/Utils.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/util/Utils.java
+@@ -59,13 +59,17 @@
+ import net.minecraft.nbt.NBTTagList;
+ import net.minecraft.nbt.NBTTagString;
+ import net.minecraft.network.play.client.C0DPacketCloseWindow;
++import net.minecraft.util.BlockPos;
+ import net.minecraft.util.ChatComponentText;
+ import net.minecraft.util.ChatStyle;
+ import net.minecraft.util.EnumChatFormatting;
+ import net.minecraft.util.IChatComponent;
+ import net.minecraft.util.Matrix4f;
++import net.minecraft.util.MovingObjectPosition;
+ import net.minecraft.util.ResourceLocation;
+ import net.minecraft.util.StatCollector;
++import net.minecraft.util.Vec3;
++import net.minecraft.world.World;
+ import net.minecraftforge.fml.common.Loader;
+ import org.jetbrains.annotations.NotNull;
+ import org.jetbrains.annotations.Nullable;
+@@ -2487,4 +2491,41 @@ public static String getDiscordInvite() {
+ 
+ 		return "discord.gg/" + misc.get("discordInvite").getAsString();
+ 	}
++
++	public static boolean canPlayerSeeNearBlocks(double x, double y, double z) {
++		EntityPlayerSP p = Minecraft.getMinecraft().thePlayer;
++		if (p == null) return false;
++		World world = p.worldObj;
++		Vec3 playerPosition = new Vec3(p.posX, p.posY + p.eyeHeight, p.posZ);
++		BlockPos blockPos = new BlockPos(x, y, z);
++		MovingObjectPosition hitResult1 = rayTraceBlocks(world, playerPosition, x, y, z);
++		if (canSee(hitResult1, blockPos)) return true;
++		MovingObjectPosition hitResult2 = rayTraceBlocks(world, playerPosition, x + 1, y, z);
++		if (canSee(hitResult2, blockPos.add(1, 0, 1))) return true;
++		MovingObjectPosition hitResult3 = rayTraceBlocks(world, playerPosition, x + 1, y + 1, z);
++		if (canSee(hitResult3, blockPos.add(1, 1, 0))) return true;
++		MovingObjectPosition hitResult4 = rayTraceBlocks(world, playerPosition, x + 1, y + 1, z + 1);
++		if (canSee(hitResult4, blockPos.add(1, 1, 1))) return true;
++
++		MovingObjectPosition hitResult5 = rayTraceBlocks(world, playerPosition, x, y + 1, z + 1);
++		if (canSee(hitResult5, blockPos.add(0, 1, 1))) return true;
++		MovingObjectPosition hitResult6 = rayTraceBlocks(world, playerPosition, x, y + 1, z);
++		if (canSee(hitResult6, blockPos.add(0, 1, 0))) return true;
++		MovingObjectPosition hitResult7 = rayTraceBlocks(world, playerPosition, x + 1, y, z + 1);
++		if (canSee(hitResult7, blockPos.add(1, 0, 1))) return true;
++		MovingObjectPosition hitResult8 = rayTraceBlocks(world, playerPosition, x, y + 1, z);
++		if (canSee(hitResult8, blockPos.add(0, 1, 0))) return true;
++
++		return false;
++	}
++
++	private static boolean canSee(MovingObjectPosition hitResult, BlockPos bp) {
++		return hitResult == null
++			|| hitResult.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK
++			|| bp.equals(hitResult.getBlockPos());
++	}
++
++	private static MovingObjectPosition rayTraceBlocks(World world, Vec3 playerPosition, double x, double y, double z) {
++		return world.rayTraceBlocks(playerPosition, new Vec3(x, y, z), false, true, true);
++	}
+ }

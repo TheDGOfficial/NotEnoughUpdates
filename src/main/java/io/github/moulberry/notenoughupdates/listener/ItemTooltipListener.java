@@ -509,55 +509,67 @@ public class ItemTooltipListener {
 					String missingItem = null;
 					int totalValue = 0;
 					HashMap<String, Double> itemValues = new HashMap<>();
-					for (int i = 0; i < 7; i++) {
+					for (int i = 0; i < 15; i++) {
 						ItemStack item = lower.getStackInSlot(10 + i);
 						String internal = neu.manager.getInternalNameForItem(item);
-						if (internal != null) {
-							internal = internal.replace("\u00CD", "I").replace("\u0130", "I");
-							float bazaarPrice = -1;
-							JsonObject bazaarInfo = neu.manager.auctionManager.getBazaarInfo(internal);
-							if (bazaarInfo != null && bazaarInfo.has("curr_sell")) {
-								bazaarPrice = bazaarInfo.get("curr_sell").getAsFloat();
-							}
-							if (bazaarPrice < 5000000 && internal.equals("RECOMBOBULATOR_3000")) bazaarPrice = 5000000;
-
+						final boolean shard = item.getDisplayName().contains("Shard");
+						if (internal != null || shard) {
 							double worth = -1;
-							if (bazaarPrice > 0) {
-								worth = bazaarPrice;
-							} else {
-								switch (NotEnoughUpdates.INSTANCE.config.dungeons.profitType) {
-									case 1:
-										worth = neu.manager.auctionManager.getItemAvgBin(internal);
-										break;
-									case 2:
-										JsonObject auctionInfo = neu.manager.auctionManager.getItemAuctionInfo(internal);
-										if (auctionInfo != null) {
-											if (auctionInfo.has("clean_price")) {
-												worth = (long) auctionInfo.get("clean_price").getAsDouble();
-											} else {
-												worth =
-													(long) (auctionInfo.get("price").getAsDouble() / auctionInfo.get("count").getAsDouble());
-											}
-										}
-										break;
-									default:
-										worth = neu.manager.auctionManager.getLowestBin(internal);
+							if (internal != null) {
+								internal = internal.replace("\u00CD", "I").replace("\u0130", "I");
+								float bazaarPrice = -1;
+								JsonObject bazaarInfo = neu.manager.auctionManager.getBazaarInfo(internal);
+								if (bazaarInfo != null && bazaarInfo.has("curr_sell")) {
+									bazaarPrice = bazaarInfo.get("curr_sell").getAsFloat();
 								}
-								if (worth <= 0) {
-									worth = neu.manager.auctionManager.getLowestBin(internal);
-									if (worth <= 0) {
-										worth = neu.manager.auctionManager.getItemAvgBin(internal);
-										if (worth <= 0) {
+								if (bazaarPrice < 5000000 && internal.equals("RECOMBOBULATOR_3000")) bazaarPrice = 5000000;
+
+								if (bazaarPrice > 0) {
+									worth = bazaarPrice;
+								} else {
+									switch (NotEnoughUpdates.INSTANCE.config.dungeons.profitType) {
+										case 1:
+											worth = neu.manager.auctionManager.getItemAvgBin(internal);
+											break;
+										case 2:
 											JsonObject auctionInfo = neu.manager.auctionManager.getItemAuctionInfo(internal);
 											if (auctionInfo != null) {
 												if (auctionInfo.has("clean_price")) {
-													worth = (int) auctionInfo.get("clean_price").getAsFloat();
+													worth = (long) auctionInfo.get("clean_price").getAsDouble();
 												} else {
-													worth = (int) (auctionInfo.get("price").getAsFloat() / auctionInfo.get("count").getAsFloat());
+													worth =
+														(long) (auctionInfo.get("price").getAsDouble() / auctionInfo.get("count").getAsDouble());
+												}
+											}
+											break;
+										default:
+											worth = neu.manager.auctionManager.getLowestBin(internal);
+									}
+									if (worth <= 0) {
+										worth = neu.manager.auctionManager.getLowestBin(internal);
+										if (worth <= 0) {
+											worth = neu.manager.auctionManager.getItemAvgBin(internal);
+											if (worth <= 0) {
+												JsonObject auctionInfo = neu.manager.auctionManager.getItemAuctionInfo(internal);
+												if (auctionInfo != null) {
+													if (auctionInfo.has("clean_price")) {
+														worth = (int) auctionInfo.get("clean_price").getAsFloat();
+													} else {
+														worth = (int) (auctionInfo.get("price").getAsFloat() / auctionInfo.get("count").getAsFloat());
+													}
 												}
 											}
 										}
 									}
+								}
+							} else if (shard) {
+								final String n = item.getDisplayName();
+								if (n.contains("Apex Dragon")) {
+									worth = NotEnoughUpdates.INSTANCE.manager.auctionManager.getBazaarOrBin("SHARD_APEX_DRAGON", true);
+								} else if (n.contains("Power Dragon")) {
+									worth = NotEnoughUpdates.INSTANCE.manager.auctionManager.getBazaarOrBin("SHARD_POWER_DRAGON", true);
+								} else if (n.contains("Wither")) {
+									worth = NotEnoughUpdates.INSTANCE.manager.auctionManager.getBazaarOrBin("SHARD_WITHER", true);
 								}
 							}
 
@@ -588,7 +600,7 @@ public class ItemTooltipListener {
 								itemValues.put(display, worth);
 							} else {
 								if (totalValue != -1) {
-									missingItem = internal;
+									missingItem = internal != null ? internal : item.getDisplayName();
 								}
 								totalValue = -1;
 							}

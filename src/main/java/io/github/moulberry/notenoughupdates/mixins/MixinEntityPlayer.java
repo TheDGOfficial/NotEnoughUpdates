@@ -19,6 +19,8 @@
 
 package io.github.moulberry.notenoughupdates.mixins;
 
+import org.apache.commons.lang3.StringUtils;
+
 import io.github.moulberry.notenoughupdates.cosmetics.CapeManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -39,18 +41,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MixinEntityPlayer {
 	@Shadow
 	public abstract boolean interactWith(Entity par1);
-
-	@Inject(method = "isWearing", at = @At("HEAD"), cancellable = true)
-	public void isWearing(EnumPlayerModelParts part, CallbackInfoReturnable<Boolean> cir) {
-		if (part == EnumPlayerModelParts.CAPE) {
-			EntityPlayer $this = (EntityPlayer) (Object) this;
-			String uuid = $this.getUniqueID().toString().replace("-", "");
-			String cape = CapeManager.getInstance().getCape(uuid);
-			if (cape != null && !cape.equalsIgnoreCase("null")) {
-				cir.setReturnValue(false);
-			}
-		}
-	}
 
 	@Redirect(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/world/World;isRemote:Z", opcode = Opcodes.GETFIELD))
 	public boolean onIsRemote(World instance) {

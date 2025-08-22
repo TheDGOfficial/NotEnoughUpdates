@@ -1,0 +1,94 @@
+From 0a99a3b368b75230fdd6bb5a43bb8540f3698fee Mon Sep 17 00:00:00 2001
+From: nopo <nopotheemail@gmail.com>
+Date: Fri, 14 Feb 2025 10:02:00 +1100
+Subject: [PATCH] added rift biome i guess
+
+---
+ .../notenoughupdates/NotEnoughUpdates.java    |  5 ++++
+ .../customblockzones/CustomBiomes.java        |  1 +
+ .../customblockzones/RiftTextures.java        | 28 +++++++++++++++++++
+ .../customblockzones/SpecialBlockZone.java    |  1 +
+ 4 files changed, 35 insertions(+)
+ create mode 100644 src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/RiftTextures.java
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/NotEnoughUpdates.java b/src/main/java/io/github/moulberry/notenoughupdates/NotEnoughUpdates.java
+index 479a536c2..0881a89fe 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/NotEnoughUpdates.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/NotEnoughUpdates.java
+@@ -68,6 +68,7 @@
+ import net.minecraft.util.ChatComponentText;
+ import net.minecraft.util.EnumChatFormatting;
+ import net.minecraft.world.biome.BiomeGenBase;
++import net.minecraft.world.biome.BiomeGenEnd;
+ import net.minecraft.world.biome.BiomeGenHell;
+ import net.minecraft.world.biome.BiomeGenJungle;
+ import net.minecraft.world.biome.BiomeGenMesa;
+@@ -168,6 +169,10 @@ private static int parseVersion(String versionName) {
+ 		(new BiomeGenSnow(109, false))
+ 			.setColor(16777215)
+ 			.setBiomeName("NeuGlaciteTunnels");
++	public static final BiomeGenBase rift =
++		(new BiomeGenEnd(110))
++			.setColor(16777215)
++			.setBiomeName("NeuRift");
+ 	private static final long CHAT_MSG_COOLDOWN = 200;
+ 	//Stolen from Biscut and used for detecting whether in skyblock
+ 	private static final Set<String> SKYBLOCK_IN_ALL_LANGUAGES =
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/CustomBiomes.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/CustomBiomes.java
+index f9c5faba8..709722be2 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/CustomBiomes.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/CustomBiomes.java
+@@ -51,6 +51,7 @@ private CustomBiomes() {
+ 		subdividers.put("mining_3", new DwarvenMinesTextures());
+ 		subdividers.put("crimson_isle", new CrimsonIsleTextures());
+ 		subdividers.put("mineshaft", new MineshaftTextures());
++		subdividers.put("rift", new RiftTextures());
+ 	}
+ 
+ 	//Biome Prefix: NeuAreaBiomeName
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/RiftTextures.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/RiftTextures.java
+new file mode 100644
+index 000000000..b0a12f864
+--- /dev/null
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/RiftTextures.java
+@@ -0,0 +1,28 @@
++/*
++ * Copyright (C) 2024 NotEnoughUpdates contributors
++ *
++ * This file is part of NotEnoughUpdates.
++ *
++ * NotEnoughUpdates is free software: you can redistribute it
++ * and/or modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation, either
++ * version 3 of the License, or (at your option) any later version.
++ *
++ * NotEnoughUpdates is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * along with NotEnoughUpdates. If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package io.github.moulberry.notenoughupdates.miscfeatures.customblockzones;
++
++import net.minecraft.util.BlockPos;
++
++public class RiftTextures implements IslandZoneSubdivider {
++			public SpecialBlockZone getSpecialZoneForBlock(String location, BlockPos pos) {
++				return SpecialBlockZone.RIFT;
++		}
++}
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/SpecialBlockZone.java b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/SpecialBlockZone.java
+index 8b6af7519..c73d4d1a0 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/SpecialBlockZone.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/miscfeatures/customblockzones/SpecialBlockZone.java
+@@ -34,6 +34,7 @@ public enum SpecialBlockZone {
+ 	SMOLDERING_TOMB(NotEnoughUpdates.smolderingTomb, false, false, true, false, true),
+ 	GLACITE_MINESHAFT(NotEnoughUpdates.glaciteMineshaft, true, true, true, true, false),
+ 	GLACITE_TUNNELS(NotEnoughUpdates.glaciteTunnels, true, true, true, true, false),
++	RIFT(NotEnoughUpdates.rift, true, true, true, true, true),
+ 	NON_SPECIAL_ZONE(null, false, false, false, false, false);
+ 
+ 	private final BiomeGenBase customBiome;

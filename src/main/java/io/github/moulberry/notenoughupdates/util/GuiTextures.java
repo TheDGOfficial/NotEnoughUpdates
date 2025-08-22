@@ -63,6 +63,9 @@ public class GuiTextures {
 	public static final ResourceLocation dungeon_chest_worth =
 		new ResourceLocation("notenoughupdates:dungeon_chest_worth.png");
 
+	public static final ResourceLocation dungeon_chest_worth_large =
+		new ResourceLocation("notenoughupdates:dungeon_chest_worth_large.png");
+
 	public static final ResourceLocation auction_view = new ResourceLocation("notenoughupdates:auction_view.png");
 	public static final ResourceLocation auction_accept = new ResourceLocation("notenoughupdates:auction_accept.png");
 	public static final ResourceLocation auction_price = new ResourceLocation("notenoughupdates:auction_price.png");

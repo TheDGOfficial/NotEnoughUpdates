@@ -25,7 +25,9 @@ import io.github.moulberry.notenoughupdates.util.stripControlCodes
 import net.minecraft.client.Minecraft
 import net.minecraftforge.event.entity.EntityJoinWorldEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
-import java.util.*
+import java.util.Locale
+import java.util.regex.Pattern
+import java.util.regex.Matcher
 
 @NEUAutoSubscribe
 object TablistAPI {
@@ -46,7 +48,7 @@ object TablistAPI {
         addToQueue: Boolean,
         showNotification: Boolean
     ): List<String> {
-        val regex = widget.widgetName.regex ?: Regex.fromLiteral("${widget.widgetName}:")
+        val matcher = widget.widgetName.matcher
         val list = mutableListOf<String>()
         // If not a single reset is present, the tab list hasn't been initialized yet
         var sawReset = false
@@ -70,7 +72,7 @@ object TablistAPI {
                 }
 
                 list.add(entry)
-            } else if (entry.stripControlCodes().matches(regex)) {
+            } else if (matcher.reset(entry.stripControlCodes()).matches()) {
                 list.add(entry)
             }
         }
@@ -128,7 +130,7 @@ object TablistAPI {
         )
     }
 
-    enum class WidgetNames(val regex: Regex?) {
+    enum class WidgetNames(val pattern: Pattern?) {
         COMMISSIONS(null),
         /*
             '§e§lSkills:'
@@ -137,19 +139,21 @@ object TablistAPI {
             ' Combat 46: §r§a21.7%'
             ' Foraging 23: §r§a43.5%'
         * */
-        SKILLS(Regex("Skills:( .*)?")),
+        SKILLS(Pattern.compile("Skills:( .*)?")),
         /*
         * '§e§lSkills: §r§aCombat 46: §r§321.7%'
         * */
-        DUNGEON_SKILLS(Regex("Skills: (.*)")),
+        DUNGEON_SKILLS(Pattern.compile("Skills: (.*)")),
         TRAPPER(null),
-        FORGE(Regex("Forges:( \\(\\d/\\d\\))?")),
-        POWDER(Regex.fromLiteral("Powders:")),
-        PROFILE(Regex("Profile: ([A-Za-z]+)( .*)?")),
-        ACTIVE_EFFECTS(Regex("Active Effects(: \\(\\d+\\))?")),
-        COOKIE_BUFF(Regex("Cookie Buff")),
+        FORGE(Pattern.compile("Forges:( \\(\\d/\\d\\))?")),
+        POWDER(Pattern.compile("Powders:", Pattern.LITERAL)),
+        PROFILE(Pattern.compile("Profile: ([A-Za-z]+)( .*)?")),
+        ACTIVE_EFFECTS(Pattern.compile("Active Effects(: \\(\\d+\\))?")),
+        COOKIE_BUFF(Pattern.compile("Cookie Buff")),
         PET(null),
         ;
+
+        val matcher: Matcher = pattern?.matcher("") ?: Pattern.compile(this.toString(), Pattern.LITERAL).matcher("")
 
         override fun toString(): String {
             return this.name.lowercase().split("_").joinToString(" ") { str ->

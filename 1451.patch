@@ -1,0 +1,183 @@
+From 036e136584a386bf71fa91975b2e45ebea0a8baf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mustafa=20=C3=96NCEL?= <mustafaoncel92@gmail.com>
+Date: Thu, 3 Jul 2025 03:30:38 +0300
+Subject: [PATCH 1/2] Fix world memory leak
+
+---
+ .../notenoughupdates/util/brigadier/NEUBrigadierHook.kt      | 5 +++--
+ .../notenoughupdates/util/brigadier/BrigadierRoot.kt         | 5 +++--
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt b/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt
+index fc4fd39c1..d7dd995cf 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt
++++ b/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt
+@@ -30,6 +30,7 @@ import net.minecraft.util.ChatComponentText
+ import net.minecraft.util.EnumChatFormatting.YELLOW
+ import java.util.concurrent.CompletableFuture
+ import java.util.function.Predicate
++import java.lang.ref.WeakReference
+ 
+ /**
+  * Hook for converting brigadier commands to normal legacy Minecraft commands (string array style).
+@@ -65,7 +66,7 @@ class NEUBrigadierHook(
+     private fun getText(args: Array<out String>) = "${commandNode.name} ${args.joinToString(" ")}"
+ 
+     override fun processCommand(sender: ICommandSender, args: Array<out String>) {
+-        val results = brigadierRoot.parseText.apply(sender to getText(args).trim())
++        val results = brigadierRoot.parseText.apply(WeakReference(sender) to getText(args).trim())
+         if (beforeCommand?.test(results) == false)
+             return
+         try {
+@@ -92,7 +93,7 @@ class NEUBrigadierHook(
+         }
+         if (lc == null) {
+             lastCompletion?.cancel(true)
+-            val results = brigadierRoot.parseText.apply(sender to originalText)
++            val results = brigadierRoot.parseText.apply(WeakReference(sender) to originalText)
+             lc = brigadierRoot.dispatcher.getCompletionSuggestions(results)
+         }
+         lastCompletion = lc
+diff --git a/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt b/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt
+index 660080448..116964226 100644
+--- a/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt
++++ b/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt
+@@ -30,6 +30,7 @@ import net.minecraft.command.ICommandSender
+ import net.minecraftforge.client.ClientCommandHandler
+ import java.lang.RuntimeException
+ import java.util.*
++import java.lang.ref.WeakReference
+ 
+ @NEUAutoSubscribe
+ object BrigadierRoot {
+@@ -37,8 +38,8 @@ object BrigadierRoot {
+     var dispatcher = CommandDispatcher<DefaultSource>()
+         private set
+     val parseText =
+-        LRUCache.memoize<Pair<ICommandSender, String>, ParseResults<DefaultSource>>({ (sender, text) ->
+-            dispatcher.parse(text, sender)
++        LRUCache.memoize<Pair<WeakReference<ICommandSender>, String>, ParseResults<DefaultSource>>({ (sender, text) ->
++            dispatcher.parse(text, sender.get())
+         }, 1)
+ 
+     fun getHelpForNode(node: CommandNode<DefaultSource>): String? {
+
+From 60ed003c9e7ab4734b107f87d89e660881f263b6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mustafa=20=C3=96NCEL?= <mustafaoncel92@gmail.com>
+Date: Tue, 15 Jul 2025 05:25:49 +0300
+Subject: [PATCH 2/2] Use WeakHashMap instead of WeakReference
+
+- Fixes .hashCode being different due to a new WeakReference being created everytime an entry is put into cache, as WeakHashMap now handles that automatically for us.
+- Fixes WeakReference wrapper object still being leaked even though the object it holds reference into is not. WeakHashMap automatically discards entries of discarded (Garbage Collected) references for us.
+
+Also made a very slight change to fix an instance where NEU was saving a local variable redirect (assigned to value of node.redirect) and doing a null check on it but not using the local variable and instead using node.redirect. Changed it to use the null-checked local variable.
+
+Kept the Collections.synchronizedMap used in LRUCache in the old code for thread safety (wraps the WeakHashMap with the .sychronizedMap), but I do not know if that's needed since MC is single threaded, but I'd suppose its best to not change behaviour of thread-safety.
+---
+ .../util/brigadier/NEUBrigadierHook.kt        |  5 ++---
+ .../util/brigadier/BrigadierRoot.kt           | 20 +++++++++----------
+ 2 files changed, 12 insertions(+), 13 deletions(-)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt b/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt
+index d7dd995cf..acd36216c 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt
++++ b/src/main/java/io/github/moulberry/notenoughupdates/util/brigadier/NEUBrigadierHook.kt
+@@ -30,7 +30,6 @@ import net.minecraft.util.ChatComponentText
+ import net.minecraft.util.EnumChatFormatting.YELLOW
+ import java.util.concurrent.CompletableFuture
+ import java.util.function.Predicate
+-import java.lang.ref.WeakReference
+ 
+ /**
+  * Hook for converting brigadier commands to normal legacy Minecraft commands (string array style).
+@@ -66,7 +65,7 @@ class NEUBrigadierHook(
+     private fun getText(args: Array<out String>) = "${commandNode.name} ${args.joinToString(" ")}"
+ 
+     override fun processCommand(sender: ICommandSender, args: Array<out String>) {
+-        val results = brigadierRoot.parseText.apply(WeakReference(sender) to getText(args).trim())
++        val results = brigadierRoot.parseText(sender to getText(args).trim())
+         if (beforeCommand?.test(results) == false)
+             return
+         try {
+@@ -93,7 +92,7 @@ class NEUBrigadierHook(
+         }
+         if (lc == null) {
+             lastCompletion?.cancel(true)
+-            val results = brigadierRoot.parseText.apply(WeakReference(sender) to originalText)
++            val results = brigadierRoot.parseText(sender to originalText)
+             lc = brigadierRoot.dispatcher.getCompletionSuggestions(results)
+         }
+         lastCompletion = lc
+diff --git a/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt b/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt
+index 116964226..190db304a 100644
+--- a/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt
++++ b/src/main/kotlin/io/github/moulberry/notenoughupdates/util/brigadier/BrigadierRoot.kt
+@@ -25,22 +25,23 @@ import com.mojang.brigadier.tree.ArgumentCommandNode
+ import com.mojang.brigadier.tree.CommandNode
+ import io.github.moulberry.notenoughupdates.autosubscribe.NEUAutoSubscribe
+ import io.github.moulberry.notenoughupdates.events.RegisterBrigadierCommandEvent
+-import io.github.moulberry.notenoughupdates.util.LRUCache
+ import net.minecraft.command.ICommandSender
+ import net.minecraftforge.client.ClientCommandHandler
+ import java.lang.RuntimeException
+ import java.util.*
+-import java.lang.ref.WeakReference
+ 
+ @NEUAutoSubscribe
+ object BrigadierRoot {
+     private val help: MutableMap<CommandNode<DefaultSource>, String> = IdentityHashMap()
+     var dispatcher = CommandDispatcher<DefaultSource>()
+         private set
+-    val parseText =
+-        LRUCache.memoize<Pair<WeakReference<ICommandSender>, String>, ParseResults<DefaultSource>>({ (sender, text) ->
+-            dispatcher.parse(text, sender.get())
+-        }, 1)
++
++    private val parseCache =
++        Collections.synchronizedMap(WeakHashMap<Pair<ICommandSender, String>, ParseResults<DefaultSource>>())
++
++    val parseText: (Pair<ICommandSender, String>) -> ParseResults<DefaultSource> = { (sender, text) ->
++        parseCache.computeIfAbsent(sender to text) { dispatcher.parse(text, sender) }
++    }
+ 
+     fun getHelpForNode(node: CommandNode<DefaultSource>): String? {
+         return help[node]
+@@ -53,7 +54,6 @@ object BrigadierRoot {
+         help[node] = helpText
+     }
+ 
+-
+     fun getAllUsages(
+         path: String,
+         node: CommandNode<ICommandSender>,
+@@ -63,7 +63,7 @@ object BrigadierRoot {
+         visited.add(node)
+         val redirect = node.redirect
+         if (redirect != null) {
+-            yieldAll(getAllUsages(path, node.redirect, visited))
++            yieldAll(getAllUsages(path, redirect, visited))
+             visited.remove(node)
+             return@sequence
+         }
+@@ -79,7 +79,6 @@ object BrigadierRoot {
+         visited.remove(node)
+     }
+ 
+-
+     fun updateHooks() = registerHooks(ClientCommandHandler.instance)
+ 
+     fun registerHooks(handler: ClientCommandHandler) {
+@@ -90,7 +89,7 @@ object BrigadierRoot {
+         }
+         dispatcher = CommandDispatcher()
+         help.clear()
+-        parseText.clearCache()
++        parseCache.clear()
+         val event = RegisterBrigadierCommandEvent(this)
+         event.post()
+         event.hooks.forEach {
+@@ -102,3 +101,4 @@ object BrigadierRoot {
+         }
+     }
+ }
++

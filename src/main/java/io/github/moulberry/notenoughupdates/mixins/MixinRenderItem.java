@@ -90,41 +90,6 @@ public abstract class MixinRenderItem {
 		return stack.hasEffect();
 	}
 
-	@Redirect(method = "renderItem(Lnet/minecraft/item/ItemStack;Lnet/minecraft/client/resources/model/IBakedModel;)V",
-		at = @At(
-			value = "INVOKE",
-			target = "Lnet/minecraft/client/renderer/tileentity/TileEntityItemStackRenderer;renderByItem(Lnet/minecraft/item/ItemStack;)V"
-		)
-	)
-	public void renderItem_renderByItem(TileEntityItemStackRenderer tileEntityItemStackRenderer, ItemStack stack) {
-		GL11.glPushMatrix();
-		tileEntityItemStackRenderer.renderByItem(stack);
-		GL11.glPopMatrix();
-
-		ItemCustomizeManager.ItemData data = ItemCustomizeManager.getDataForItem(stack);
-		if (data != null) {
-			if (data.overrideEnchantGlint && data.enchantGlintValue) {
-				ItemCustomizeManager.renderEffectHook(data.customGlintColour, (color) -> {
-					float red = ((color >> 16) & 0xFF) / 255f;
-					float green = ((color >> 8) & 0xFF) / 255f;
-					float blue = (color & 0xFF) / 255f;
-					float alpha = ((color >> 24) & 0xFF) / 255f;
-
-					GlStateManager.color(red, green, blue, alpha);
-
-					GlStateManager.scale(1 / 8f, 1 / 8f, 1 / 8f);
-					GlStateManager.matrixMode(GL11.GL_MODELVIEW);
-					GL11.glPushMatrix();
-					ItemCustomizeManager.disableTextureBinding = true;
-					tileEntityItemStackRenderer.renderByItem(stack);
-					ItemCustomizeManager.disableTextureBinding = false;
-					GL11.glPopMatrix();
-
-				});
-			}
-		}
-	}
-
 	@Redirect(method = "renderQuads",
 		at = @At(
 			value = "INVOKE",

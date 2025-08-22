@@ -1,0 +1,21 @@
+From 1f2c6082a9ca31ba3b8ad11debb54d42f0b2f4e0 Mon Sep 17 00:00:00 2001
+From: nopo <nopotheemail@gmail.com>
+Date: Tue, 22 Jul 2025 23:12:31 +1000
+Subject: [PATCH] the pr was meant to do way more ngl
+
+---
+ .../moulberry/notenoughupdates/util/ItemResolutionQuery.java     | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/main/java/io/github/moulberry/notenoughupdates/util/ItemResolutionQuery.java b/src/main/java/io/github/moulberry/notenoughupdates/util/ItemResolutionQuery.java
+index 51318d6f2..782d9e84c 100644
+--- a/src/main/java/io/github/moulberry/notenoughupdates/util/ItemResolutionQuery.java
++++ b/src/main/java/io/github/moulberry/notenoughupdates/util/ItemResolutionQuery.java
+@@ -335,6 +335,7 @@ private static String turboCheck(String text) {
+ 		if (text.equals("Turbo-Cacti")) return "Turbo-Cactus";
+ 		if (text.equals("Prismatic")) return "Pristine";
+ 		if (text.equals("Dragon Tracer")) return "Aiming";
++		if (text.equals("Drain")) return "Syphon";
+ 
+ 		return text;
+ 	}

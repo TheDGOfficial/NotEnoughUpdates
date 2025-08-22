@@ -42,6 +42,7 @@ import net.minecraft.inventory.Slot
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
+import java.util.regex.Pattern
 
 @NEUAutoSubscribe
 object TablistTutorial {
@@ -183,8 +184,8 @@ object TablistTutorial {
 
         val priorityList = chestInventory.inventory.getOrNull(13).let(ItemUtils::getLore)
         val allTabListEntries = leftSide + middle + rightSide
-        val regex = activeTask?.widgetName?.regex ?: Regex.fromLiteral("${widget.widgetName}:")
-        if (allTabListEntries.any { it.replace("⬛", "").stripControlCodes().matches(regex) }) {
+        val matcher = activeTask?.widgetName?.matcher ?: Pattern.compile(widget.widgetName, Pattern.LITERAL).matcher("")
+        if (allTabListEntries.any { matcher.reset(it.replace("⬛", "").stripControlCodes()).matches() }) {
             TablistAPI.lastWidgetEnabled = activeTask!!.widgetName
             activeTask = TablistTaskQueue.getNextQueueItem()
 //            Utils.addChatMessage("Success! You enabled ${widget.widgetName}!")

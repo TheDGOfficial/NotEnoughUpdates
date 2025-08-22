@@ -107,7 +107,7 @@ import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.github.moulberry.notenoughupdates.util.GuiTextures.dungeon_chest_worth;
+import static io.github.moulberry.notenoughupdates.util.GuiTextures.dungeon_chest_worth_large;
 
 public class RenderListener {
 	private static final ResourceLocation EDITOR = new ResourceLocation("notenoughupdates:invbuttons/editor.png");
@@ -680,7 +680,7 @@ public class RenderListener {
 					String missingItem = null;
 					double totalValue = 0;
 					HashMap<String, Double> itemValues = new HashMap<>();
-					for (int i = 0; i < 7; i++) {
+					for (int i = 0; i < 15; i++) {
 						ItemStack item = lower.getStackInSlot(10 + i);
 						if (ItemUtils.isSoulbound(item)) continue;
 
@@ -699,60 +699,72 @@ public class RenderListener {
 							}
 							continue;
 						}
-						if (internal != null) {
-							internal = internal.replace("\u00CD", "I").replace("\u0130", "I");
-							float bazaarPrice = -1;
-							JsonObject bazaarInfo = neu.manager.auctionManager.getBazaarInfo(internal);
-							if (bazaarInfo != null && bazaarInfo.has("curr_sell")) {
-								bazaarPrice = bazaarInfo.get("curr_sell").getAsFloat();
-							} else if (bazaarInfo != null) {
-								bazaarPrice = 0;
-							}
-							if (bazaarPrice < 5000000 && internal.equals("RECOMBOBULATOR_3000")) bazaarPrice = 5000000;
-
+						final boolean shard = item.getDisplayName().contains("Shard");
+						if (internal != null || shard) {
 							double worth = -1;
-							boolean isOnBz = false;
-							if (bazaarPrice >= 0) {
-								worth = bazaarPrice;
-								isOnBz = true;
-							} else {
-								switch (NotEnoughUpdates.INSTANCE.config.dungeons.profitType) {
-									case 1:
-										worth = neu.manager.auctionManager.getItemAvgBin(internal);
-										break;
-									case 2:
-										JsonObject auctionInfo = neu.manager.auctionManager.getItemAuctionInfo(internal);
-										if (auctionInfo != null) {
-											if (auctionInfo.has("clean_price")) {
-												worth = (long) auctionInfo.get("clean_price").getAsDouble();
-											} else {
-												worth =
-													(long) (auctionInfo.get("price").getAsDouble() / auctionInfo.get("count").getAsDouble());
-											}
-										}
-										break;
-									default:
-										worth = neu.manager.auctionManager.getLowestBin(internal);
+							if (internal != null) {
+								internal = internal.replace("\u00CD", "I").replace("\u0130", "I");
+								float bazaarPrice = -1;
+								JsonObject bazaarInfo = neu.manager.auctionManager.getBazaarInfo(internal);
+								if (bazaarInfo != null && bazaarInfo.has("curr_sell")) {
+									bazaarPrice = bazaarInfo.get("curr_sell").getAsFloat();
+								} else if (bazaarInfo != null) {
+									bazaarPrice = 0;
 								}
-								if (worth <= 0) {
-									worth = neu.manager.auctionManager.getLowestBin(internal);
-									if (worth <= 0) {
-										worth = neu.manager.auctionManager.getItemAvgBin(internal);
-										if (worth <= 0) {
+								if (bazaarPrice < 5000000 && internal.equals("RECOMBOBULATOR_3000")) bazaarPrice = 5000000;
+
+								boolean isOnBz = false;
+								if (bazaarPrice >= 0) {
+									worth = bazaarPrice;
+									isOnBz = true;
+								} else {
+									switch (NotEnoughUpdates.INSTANCE.config.dungeons.profitType) {
+										case 1:
+											worth = neu.manager.auctionManager.getItemAvgBin(internal);
+											break;
+										case 2:
 											JsonObject auctionInfo = neu.manager.auctionManager.getItemAuctionInfo(internal);
 											if (auctionInfo != null) {
 												if (auctionInfo.has("clean_price")) {
-													worth = auctionInfo.get("clean_price").getAsFloat();
+													worth = (long) auctionInfo.get("clean_price").getAsDouble();
 												} else {
-													worth = (auctionInfo.get("price").getAsFloat() / auctionInfo.get("count").getAsFloat());
+													worth =
+														(long) (auctionInfo.get("price").getAsDouble() / auctionInfo.get("count").getAsDouble());
+												}
+											}
+											break;
+										default:
+											worth = neu.manager.auctionManager.getLowestBin(internal);
+									}
+									if (worth <= 0) {
+										worth = neu.manager.auctionManager.getLowestBin(internal);
+										if (worth <= 0) {
+											worth = neu.manager.auctionManager.getItemAvgBin(internal);
+											if (worth <= 0) {
+												JsonObject auctionInfo = neu.manager.auctionManager.getItemAuctionInfo(internal);
+												if (auctionInfo != null) {
+													if (auctionInfo.has("clean_price")) {
+														worth = auctionInfo.get("clean_price").getAsFloat();
+													} else {
+														worth = (auctionInfo.get("price").getAsFloat() / auctionInfo.get("count").getAsFloat());
+													}
 												}
 											}
 										}
 									}
 								}
+							} else if (shard) {
+								final String n = item.getDisplayName();
+								if (n.contains("Apex Dragon")) {
+									worth = NotEnoughUpdates.INSTANCE.manager.auctionManager.getBazaarOrBin("SHARD_APEX_DRAGON", true);
+								} else if (n.contains("Power Dragon")) {
+									worth = NotEnoughUpdates.INSTANCE.manager.auctionManager.getBazaarOrBin("SHARD_POWER_DRAGON", true);
+								} else if (n.contains("Wither")) {
+									worth = NotEnoughUpdates.INSTANCE.manager.auctionManager.getBazaarOrBin("SHARD_WITHER", true);
+								}
 							}
 
-							if ((worth >= 0 || isOnBz) && totalValue >= 0) {
+							if (worth >= 0 && totalValue >= 0) {
 								totalValue += worth;
 								String display = item.getDisplayName();
 
@@ -778,7 +790,7 @@ public class RenderListener {
 								itemValues.put(display, worth);
 							} else {
 								if (totalValue != -1) {
-									missingItem = internal;
+									missingItem = internal != null ? internal : item.getDisplayName();
 								}
 								totalValue = -1;
 							}
@@ -842,10 +854,10 @@ public class RenderListener {
 						return;
 					}
 
-					Minecraft.getMinecraft().getTextureManager().bindTexture(dungeon_chest_worth);
+					Minecraft.getMinecraft().getTextureManager().bindTexture(dungeon_chest_worth_large);
 					GL11.glColor4f(1, 1, 1, 1);
 					GlStateManager.disableLighting();
-					Utils.drawTexturedRect(guiLeft + xSize + 4, guiTop, 180, 101, 0, 180 / 256f, 0, 101 / 256f, GL11.GL_NEAREST);
+					Utils.drawTexturedRect(guiLeft + xSize + 4, guiTop, 180, 139, 0, 180 / 256f, 0, 139 / 256f, GL11.GL_NEAREST);
 
 					Utils.renderAlignedString(valueStringBIN1, valueStringBIN2, guiLeft + xSize + 4 + 10, guiTop + 14, 160);
 					if (neu.config.dungeons.useKismetOnDungeonProfit && kismetUsed) {

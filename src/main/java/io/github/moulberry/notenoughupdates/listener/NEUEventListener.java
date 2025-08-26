@@ -70,12 +70,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class NEUEventListener {
 
 	private final NotEnoughUpdates neu;
-	private final ExecutorService itemPreloader = Executors.newFixedThreadPool(10);
-	private final List<ItemStack> toPreload = new ArrayList<>();
+	private final ExecutorService itemPreloader = Executors.newFixedThreadPool(Math.max(2, Runtime.getRuntime().availableProcessors() * 2));
+	private final ConcurrentLinkedQueue<ItemStack> toPreload = new ConcurrentLinkedQueue<>();
 	private boolean joinedSB = false;
 
 	private boolean preloadedItems = false;
@@ -111,44 +112,42 @@ public class NEUEventListener {
 			return;
 		}
 
-		if (neu.hasSkyblockScoreboard()) {
-			if (!preloadedItems) {
-				preloadedItems = true;
-				List<JsonObject> list = new ArrayList<>(neu.manager.getItemInformation().values());
-				for (JsonObject json : list) {
-					itemPreloader.submit(() -> {
-						ItemStack stack = neu.manager.jsonToStack(json, true, false);
-						if (stack.getItem() == Items.skull) toPreload.add(stack);
-					});
-				}
-			} else if (!toPreload.isEmpty()) {
-				ItemStack itemStack = toPreload.get(0);
-				if (itemStack != null && itemStack.getItem() != null) {
-					GameProfile gameprofile = null;
-					if (itemStack.hasTagCompound()) {
-						NBTTagCompound nbttagcompound = itemStack.getTagCompound();
-						if (nbttagcompound.hasKey("SkullOwner", 10)) {
-							gameprofile = NBTUtil.readGameProfileFromNBT(nbttagcompound.getCompoundTag("SkullOwner"));
-						}
-					}
+		ItemStack itemStack = null;
 
-					SkinManager skinManager = Minecraft.getMinecraft().getSkinManager();
-					if (gameprofile != null) {
-						Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> typeMinecraftProfileTextureMap =
-							skinManager.loadSkinFromCache(gameprofile);
-
-						ResourceLocation resourceLocation = skinManager.loadSkin(
-							typeMinecraftProfileTextureMap.get(MinecraftProfileTexture.Type.SKIN),
-							MinecraftProfileTexture.Type.SKIN
-						);
-						Minecraft.getMinecraft().getTextureManager().bindTexture(resourceLocation);
-					}
-				}
-				toPreload.remove(0);
-			} else {
-				itemPreloader.shutdown();
+		if (!preloadedItems) {
+			preloadedItems = true;
+			for (JsonObject json : neu.manager.getItemInformation().values()) {
+				itemPreloader.submit(() -> {
+					ItemStack stack = neu.manager.jsonToStack(json, true, false);
+					if (stack.getItem() == Items.skull) toPreload.add(stack);
+				});
 			}
+			itemPreloader.shutdown();
+		} else if ((itemStack = toPreload.poll()) != null) {
+			if (itemStack.getItem() != null) {
+				GameProfile gameprofile = null;
+				if (itemStack.hasTagCompound()) {
+					NBTTagCompound nbttagcompound = itemStack.getTagCompound();
+					if (nbttagcompound.hasKey("SkullOwner", 10)) {
+						gameprofile = NBTUtil.readGameProfileFromNBT(nbttagcompound.getCompoundTag("SkullOwner"));
+					}
+				}
 
+				SkinManager skinManager = Minecraft.getMinecraft().getSkinManager();
+				if (gameprofile != null) {
+					Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> typeMinecraftProfileTextureMap =
+						skinManager.loadSkinFromCache(gameprofile);
+
+					ResourceLocation resourceLocation = skinManager.loadSkin(
+						typeMinecraftProfileTextureMap.get(MinecraftProfileTexture.Type.SKIN),
+						MinecraftProfileTexture.Type.SKIN
+					);
+					//Minecraft.getMinecraft().getTextureManager().bindTexture(resourceLocation);
+				}
+			}
+		}
+
+		if (neu.hasSkyblockScoreboard()) {
 			for (TextOverlay overlay : OverlayManager.textOverlays) {
 				overlay.shouldUpdateFrequent = true;
 			}
